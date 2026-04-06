@@ -31,6 +31,73 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Login overlay ── */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(5,5,8,0.97);
+  display: flex; align-items: center; justify-content: center;
+}
+#login-overlay.hidden { display: none; }
+.login-box {
+  background: #0e0e1a;
+  border: 1px solid #7b5ea7;
+  border-radius: 12px;
+  padding: 40px;
+  width: 360px;
+  text-align: center;
+}
+.login-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 22px;
+  font-weight: 900;
+  color: #7b5ea7;
+  letter-spacing: 4px;
+  margin-bottom: 6px;
+}
+.login-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: #3a3a5a;
+  letter-spacing: 3px;
+  margin-bottom: 28px;
+}
+.login-box input {
+  width: 100%;
+  background: #0a0a18;
+  border: 1px solid #1e1e3a;
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: #c8c8e8;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  margin-bottom: 16px;
+  text-align: center;
+  letter-spacing: 2px;
+}
+.login-box input:focus { border-color: #7b5ea7; }
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid #7b5ea7;
+  border-radius: 6px;
+  color: #7b5ea7;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.login-btn:hover { background: rgba(123,94,167,0.15); }
+.login-error {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #ff5252;
+  font-family: 'Share Tech Mono', monospace;
+  display: none;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -486,7 +553,7 @@ header {
 </style>
 </head>
 <body>
-<div class="layout">
+
 
   <!-- Header -->
   <header>
@@ -572,7 +639,51 @@ header {
 
 </div>
 
+<!-- Login overlay -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">ZYNOX</div>
+    <div class="login-sub">AGENT HIVE — COMMAND CENTER</div>
+    <input type="password" id="pw-input" placeholder="ENTER PASSWORD" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">AUTHENTICATE</button>
+    <div class="login-error" id="login-error">ACCESS DENIED — WRONG PASSWORD</div>
+  </div>
+</div>
+
+<div class="layout">
+
 <script>
+// ── Auth ──
+let SESSION_TOKEN = sessionStorage.getItem('zynox_token') || '';
+
+async function doLogin() {
+  const pw = document.getElementById('pw-input').value;
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pw })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      SESSION_TOKEN = d.token;
+      sessionStorage.setItem('zynox_token', SESSION_TOKEN);
+      document.getElementById('login-overlay').classList.add('hidden');
+      checkStatus();
+      loadHistory();
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  } catch(e) {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+// Check if already logged in
+if (SESSION_TOKEN) {
+  document.getElementById('login-overlay').classList.add('hidden');
+}
+
 const AGENTS = [
   { id:'scout',      name:'Scout',      color:'var(--scout)',    tag:'RESEARCH',  desc:'Finds the sharpest angle' },
   { id:'strategist', name:'Strategist', color:'var(--strat)',    tag:'STRATEGY',  desc:'Builds mission logic' },
@@ -707,7 +818,7 @@ async function launchHive() {
   try {
     const r = await fetch('/api/run_hive', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-session-token':SESSION_TOKEN},
       body: JSON.stringify({ objective, mode: currentMode })
     });
     const data = await r.json();
@@ -814,7 +925,7 @@ async function fireSingle() {
   try {
     const r = await fetch('/api/run_agent', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-session-token':SESSION_TOKEN},
       body: JSON.stringify({ agent_id: aid, prompt })
     });
     const d = await r.json();
