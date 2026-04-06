@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZynoX Hive — Setup</title>
+</head>
+<body>
+<script>
+// Redirect to main site if API key is set
+const key = localStorage.getItem('zynox_api_key');
+if (key) window.location.href = 'index.html';
+</script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #050508;
+  color: #e8e8f0;
+  font-family: 'Share Tech Mono', monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cinzel+Decorative:wght@700&display=swap');
+.card {
+  background: #0e0e1a;
+  border: 1px solid #1e1e3a;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+}
+.logo { font-family: 'Cinzel Decorative', serif; font-size: 22px; color: #7b5ea7; margin-bottom: 8px; letter-spacing: 4px; }
+.sub  { font-size: 11px; color: #3a3a5a; letter-spacing: 3px; margin-bottom: 32px; }
+label { display: block; font-size: 10px; letter-spacing: 3px; color: #5a5a7a; margin-bottom: 8px; text-align: left; }
+input {
+  width: 100%;
+  background: #0a0a18;
+  border: 1px solid #1e1e3a;
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: #c8c8e8;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  margin-bottom: 20px;
+}
+input:focus { border-color: #7b5ea7; }
+button {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: 1px solid #7b5ea7;
+  border-radius: 6px;
+  color: #7b5ea7;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 3px;
+  cursor: pointer;
+}
+button:hover { background: rgba(123,94,167,.15); }
+.note { font-size: 10px; color: #2a2a4a; margin-top: 20px; line-height: 1.7; }
+.note a { color: #5b4fcf; }
+</style>
+
+<div class="card">
+  <div class="logo">ZYNOX</div>
+  <div class="sub">FIRST TIME SETUP</div>
+  <label>YOUR ANTHROPIC API KEY</label>
+  <input type="password" id="key-input" placeholder="sk-ant-api03-...">
+  <button onclick="save()">ACTIVATE ZYNOX HIVE</button>
+  <p class="note">
+    Your key is stored only in your browser.<br>
+    Never sent anywhere except Anthropic's API.<br><br>
+    Get a key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+  </p>
+</div>
+
+<script>
+function save() {
+  const k = document.getElementById('key-input').value.trim();
+  if (!k.startsWith('sk-')) { alert('That doesn\'t look like a valid API key. It should start with sk-ant-'); return; }
+  localStorage.setItem('zynox_api_key', k);
+  window.location.href = 'index.html';
+}
+</script>
+</body>
+</html>

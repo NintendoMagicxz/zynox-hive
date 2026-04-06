@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZynoX Hive — Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #050508;
+  --bg2:      #0a0a12;
+  --bg3:      #0f0f1a;
+  --panel:    #111120;
+  --border:   #1e1e3a;
+  --accent:   #7b5ea7;
+  --accent2:  #4fc3f7;
+  --accent3:  #e040fb;
+  --glow:     #7b5ea740;
+  --text:     #e8e8f0;
+  --muted:    #5a5a7a;
+  --success:  #00e676;
+  --warn:     #ffab40;
+  --danger:   #ff5252;
+  --scout:    #4fc3f7;
+  --strat:    #7b5ea7;
+  --writer:   #00e676;
+  --edge:     #ffab40;
+  --nintendo: #e040fb;
+  --judge:    #ff5252;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Grid bg */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(123,94,167,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(123,94,167,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  grid-template-rows: 64px 1fr;
+  height: 100vh;
+  gap: 0;
+}
+
+/* ── Header ── */
+header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  gap: 20px;
+}
+
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--glow);
+}
+
+.logo span { color: var(--accent3); }
+
+.header-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 2px;
+}
+
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.dot.on  { background: var(--success); box-shadow: 0 0 6px var(--success); animation: blink 2s infinite; }
+.dot.off { background: var(--danger); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.time-display {
+  font-family: 'Orbitron', monospace;
+  font-size: 13px;
+  color: var(--accent2);
+  letter-spacing: 2px;
+}
+
+/* ── Sidebar left ── */
+.sidebar-left {
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.sidebar-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  padding: 0 20px;
+  margin-bottom: 12px;
+}
+
+/* Agent cards in sidebar */
+.agent-card {
+  padding: 12px 20px;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: all .2s;
+  margin-bottom: 2px;
+}
+.agent-card:hover { background: var(--bg3); }
+.agent-card.active { border-left-color: var(--accent); background: var(--bg3); }
+
+.agent-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.agent-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.agent-status {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.agent-status.running { background: var(--success); animation: blink .6s infinite; }
+.agent-status.done    { background: var(--accent2); }
+
+/* Mode history */
+.history-list { padding: 0 12px; }
+.hist-item {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.hist-item:hover { border-color: var(--accent); }
+.hist-time { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); }
+.hist-obj  { font-size: 12px; color: var(--text); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-mode { font-size: 10px; color: var(--accent2); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── Main panel ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.command-area {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.command-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.objective-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color .2s;
+  margin-bottom: 14px;
+}
+.objective-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--glow); }
+.objective-input::placeholder { color: var(--muted); }
+
+.mode-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 8px 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: 1px;
+}
+.mode-btn:hover  { border-color: var(--accent); color: var(--text); }
+.mode-btn.active { border-color: var(--accent); color: var(--accent); background: var(--glow); }
+
+.launch-btn {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  font-family: 'Orbitron', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+.launch-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--glow);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.launch-btn:hover::before  { opacity: 1; }
+.launch-btn:hover { box-shadow: 0 0 20px var(--glow); }
+.launch-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Hive pipeline display ── */
+.pipeline {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.pipeline-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.agent-output {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: border-color .3s;
+  opacity: .4;
+}
+.agent-output.active   { opacity: 1; border-color: var(--accent2); }
+.agent-output.complete { opacity: 1; }
+
+.ao-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.ao-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+.ao-tag {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: 'Share Tech Mono', monospace;
+  margin-left: auto;
+}
+
+.ao-body {
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+  font-family: 'Share Tech Mono', monospace;
+  white-space: pre-wrap;
+  min-height: 40px;
+}
+.ao-body.filled { color: var(--text); }
+
+.ao-loader {
+  display: none;
+  padding: 14px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: var(--accent2);
+}
+.ao-loader::after {
+  content: '...';
+  animation: dots 1.2s steps(4, end) infinite;
+}
+@keyframes dots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} 100%{content:'.'} }
+
+/* Judge scores */
+.judge-scores {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 14px;
+  border-top: 1px solid var(--border);
+}
+.score-box {
+  background: var(--bg3);
+  border-radius: 6px;
+  padding: 8px;
+  text-align: center;
+}
+.score-label { font-size: 10px; color: var(--muted); font-family: 'Share Tech Mono', monospace; }
+.score-val   { font-family: 'Orbitron', monospace; font-size: 20px; font-weight: 700; margin-top: 4px; }
+.verdict-bar {
+  margin: 0 14px 14px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+.verdict-pass   { background: rgba(0,230,118,.1); color: var(--success); border: 1px solid var(--success); }
+.verdict-revise { background: rgba(255,171,64,.1); color: var(--warn); border: 1px solid var(--warn); }
+
+/* ── Sidebar right ── */
+.sidebar-right {
+  border-left: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.final-output-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  min-height: 80px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.action-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: 1px;
+}
+.action-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+.single-agent-area { flex: 1; overflow-y: auto; padding: 16px; }
+
+.agent-select {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  margin-bottom: 8px;
+  appearance: none;
+}
+
+.mini-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  margin-bottom: 8px;
+  resize: vertical;
+}
+.mini-input:focus, .agent-select:focus { border-color: var(--accent); }
+
+.mini-result {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  min-height: 60px;
+  display: none;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Header -->
+  <header>
+    <div>
+      <div class="logo">ZYNOX<span>X</span></div>
+      <div class="header-sub">AGENT HIVE — COMMAND CENTER</div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill">
+        <span class="dot" id="dot-net"></span>
+        <span id="lbl-net">CHECKING</span>
+      </div>
+      <div class="status-pill">
+        <span class="dot" id="dot-ollama"></span>
+        <span id="lbl-ollama">OLLAMA</span>
+      </div>
+      <div class="status-pill">
+        <span class="dot" id="dot-engine"></span>
+        <span id="lbl-engine">ENGINE</span>
+      </div>
+      <div class="time-display" id="clock">00:00:00</div>
+    </div>
+  </header>
+
+  <!-- Left sidebar: agents + history -->
+  <aside class="sidebar-left">
+    <div class="sidebar-label">AGENT ROSTER</div>
+
+    <div id="agent-roster"></div>
+
+    <div style="margin-top: 24px;">
+      <div class="sidebar-label" style="padding: 0 20px;">RECENT RUNS</div>
+      <div class="history-list" id="history-list">
+        <div style="font-size:12px;color:var(--muted);padding:8px;">No runs yet.</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main panel -->
+  <main class="main">
+    <div class="command-area">
+      <div class="command-title">OBJECTIVE</div>
+      <input class="objective-input" id="objective" type="text"
+        placeholder="What's the mission, Tim? e.g. 'Pitch SpaceX a documentary series'">
+
+      <div class="mode-row">
+        <button class="mode-btn active" data-mode="post"   onclick="setMode(this)">X POST</button>
+        <button class="mode-btn"        data-mode="reply"  onclick="setMode(this)">REPLY</button>
+        <button class="mode-btn"        data-mode="pitch"  onclick="setMode(this)">PITCH</button>
+        <button class="mode-btn"        data-mode="thread" onclick="setMode(this)">THREAD</button>
+        <button class="mode-btn"        data-mode="free"   onclick="setMode(this)">FREE</button>
+      </div>
+
+      <button class="launch-btn" id="launch-btn" onclick="launchHive()">
+        ▶ &nbsp; DEPLOY HIVE
+      </button>
+    </div>
+
+    <div class="pipeline" id="pipeline">
+      <div class="pipeline-title">AGENT PIPELINE OUTPUT</div>
+      <div id="pipeline-agents"></div>
+    </div>
+  </main>
+
+  <!-- Right sidebar: final output + single agent -->
+  <aside class="sidebar-right">
+    <div class="panel-section">
+      <div class="panel-title">FINAL OUTPUT</div>
+      <div class="final-output-box" id="final-output">Awaiting hive run...</div>
+      <button class="action-btn" onclick="copyFinal()">⎘ COPY TO CLIPBOARD</button>
+      <button class="action-btn" onclick="exportFinal()">↓ EXPORT .TXT</button>
+    </div>
+
+    <div class="single-agent-area">
+      <div class="panel-title">SINGLE AGENT FIRE</div>
+      <select class="agent-select" id="single-agent-select"></select>
+      <textarea class="mini-input" id="single-prompt" rows="3"
+        placeholder="Fire one agent directly..."></textarea>
+      <button class="action-btn" onclick="fireSingle()">⚡ FIRE AGENT</button>
+      <div class="mini-result" id="single-result"></div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+const AGENTS = [
+  { id:'scout',      name:'Scout',      color:'var(--scout)',    tag:'RESEARCH',  desc:'Finds the sharpest angle' },
+  { id:'strategist', name:'Strategist', color:'var(--strat)',    tag:'STRATEGY',  desc:'Builds mission logic' },
+  { id:'writer',     name:'Writer',     color:'var(--writer)',   tag:'DRAFT',     desc:'Creates raw content' },
+  { id:'edge',       name:'Edge',       color:'var(--edge)',     tag:'SHARPEN',   desc:'Makes it 30% bolder' },
+  { id:'nintendo',   name:'Nintendo',   color:'var(--nintendo)', tag:'BRAND',     desc:"Injects Tim's voice" },
+  { id:'judge',      name:'Judge',      color:'var(--judge)',    tag:'VERDICT',   desc:'Scores and filters' },
+];
+
+let currentMode = 'post';
+let lastResults = {};
+
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map(n => String(n).padStart(2,'0')).join(':');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Status ──
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const s = await r.json();
+    setDot('net',    s.internet, s.internet ? 'ONLINE' : 'OFFLINE');
+    setDot('ollama', s.ollama,   s.ollama   ? 'OLLAMA' : 'NO OLLAMA');
+    setDot('engine', s.internet && s.api_key, s.engine.toUpperCase());
+  } catch(e) {
+    setDot('net', false, 'SERVER?');
+  }
+}
+function setDot(id, on, label) {
+  const dot = document.getElementById('dot-'+id);
+  const lbl = document.getElementById('lbl-'+id);
+  dot.className = 'dot ' + (on ? 'on' : 'off');
+  lbl.textContent = label;
+}
+checkStatus();
+setInterval(checkStatus, 10000);
+
+// ── Build agent roster ──
+function buildRoster() {
+  const el = document.getElementById('agent-roster');
+  el.innerHTML = AGENTS.map(a => `
+    <div class="agent-card" id="acard-${a.id}">
+      <div class="agent-name" style="color:${a.color}">
+        <span class="agent-status" id="ast-${a.id}"></span>${a.name}
+      </div>
+      <div class="agent-desc">${a.desc}</div>
+    </div>
+  `).join('');
+
+  // Single agent select
+  const sel = document.getElementById('single-agent-select');
+  sel.innerHTML = AGENTS.map(a => `<option value="${a.id}">${a.name} — ${a.tag}</option>`).join('');
+}
+buildRoster();
+
+// ── Build pipeline placeholders ──
+function buildPipeline() {
+  const el = document.getElementById('pipeline-agents');
+  el.innerHTML = AGENTS.map(a => `
+    <div class="agent-output" id="ao-${a.id}">
+      <div class="ao-header">
+        <span style="width:10px;height:10px;border-radius:50%;background:${a.color};display:inline-block;flex-shrink:0"></span>
+        <span class="ao-name" style="color:${a.color}">${a.name}</span>
+        <span class="ao-tag">${a.tag}</span>
+      </div>
+      <div class="ao-loader" id="aol-${a.id}">Processing</div>
+      <div class="ao-body" id="aob-${a.id}">Waiting...</div>
+      ${a.id === 'judge' ? '<div id="judge-scores"></div>' : ''}
+    </div>
+  `).join('');
+}
+buildPipeline();
+
+// ── Mode toggle ──
+function setMode(btn) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentMode = btn.dataset.mode;
+}
+
+// ── Launch hive ──
+async function launchHive() {
+  const objective = document.getElementById('objective').value.trim();
+  if (!objective) { document.getElementById('objective').focus(); return; }
+
+  const btn = document.getElementById('launch-btn');
+  btn.disabled = true;
+  btn.textContent = '⟳  HIVE RUNNING...';
+
+  // Reset UI
+  AGENTS.forEach(a => {
+    const ao  = document.getElementById('ao-'+a.id);
+    const aob = document.getElementById('aob-'+a.id);
+    const aol = document.getElementById('aol-'+a.id);
+    ao.className  = 'agent-output';
+    aob.className = 'ao-body';
+    aob.textContent = 'Waiting...';
+    aol.style.display = 'none';
+    document.getElementById('ast-'+a.id).className = 'agent-status';
+  });
+  document.getElementById('final-output').textContent = 'Hive running...';
+  document.getElementById('judge-scores').innerHTML = '';
+
+  // Animate agents sequentially while real call runs
+  let agentIdx = 0;
+  const interval = setInterval(() => {
+    if (agentIdx > 0) {
+      const prev = AGENTS[agentIdx-1];
+      document.getElementById('aol-'+prev.id).style.display = 'none';
+      document.getElementById('ast-'+prev.id).className = 'agent-status done';
+    }
+    if (agentIdx < AGENTS.length) {
+      const cur = AGENTS[agentIdx];
+      const ao  = document.getElementById('ao-'+cur.id);
+      const aol = document.getElementById('aol-'+cur.id);
+      ao.className = 'agent-output active';
+      aol.style.display = 'block';
+      document.getElementById('ast-'+cur.id).className = 'agent-status running';
+      ao.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      agentIdx++;
+    } else {
+      clearInterval(interval);
+    }
+  }, 1200);
+
+  try {
+    const r = await fetch('/api/run_hive', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ objective, mode: currentMode })
+    });
+    const data = await r.json();
+    clearInterval(interval);
+    lastResults = data.results || {};
+    renderResults(lastResults);
+    loadHistory();
+  } catch(e) {
+    clearInterval(interval);
+    document.getElementById('final-output').textContent = 'Server error. Is zynox_server.py running?';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '▶  DEPLOY HIVE';
+}
+
+function renderResults(results) {
+  AGENTS.forEach(a => {
+    const aob = document.getElementById('aob-'+a.id);
+    const aol = document.getElementById('aol-'+a.id);
+    const ao  = document.getElementById('ao-'+a.id);
+    const astat = document.getElementById('ast-'+a.id);
+
+    aol.style.display = 'none';
+    astat.className = 'agent-status done';
+    ao.className = 'agent-output complete';
+
+    const text = results[a.id] || '';
+    aob.className = 'ao-body filled';
+
+    if (a.id === 'judge') {
+      // Try to parse judge JSON
+      try {
+        const clean = text.replace(/```json|```/g,'').trim();
+        const j = JSON.parse(clean);
+        aob.textContent = j.feedback || text;
+        const scores = document.getElementById('judge-scores');
+        const pass = (j.verdict||'').toUpperCase().includes('PASS');
+        scores.innerHTML = `
+          <div class="judge-scores">
+            ${[['HOOK',j.hook],['ELON',j.elon],['BRAND',j.brand],['VIRAL',j.viral]].map(([l,v])=>`
+              <div class="score-box">
+                <div class="score-label">${l}</div>
+                <div class="score-val" style="color:${scoreColor(v)}">${v||'?'}</div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="verdict-bar ${pass ? 'verdict-pass' : 'verdict-revise'}">
+            ${pass ? '✓ PASS' : '⟳ REVISE'}
+          </div>
+        `;
+      } catch(e) {
+        aob.textContent = text;
+      }
+    } else {
+      aob.textContent = text;
+    }
+  });
+
+  const final = results.nintendo || '';
+  document.getElementById('final-output').textContent = final;
+}
+
+function scoreColor(v) {
+  if (!v) return 'var(--muted)';
+  const n = parseInt(v);
+  if (n >= 8) return 'var(--success)';
+  if (n >= 6) return 'var(--warn)';
+  return 'var(--danger)';
+}
+
+// ── History ──
+async function loadHistory() {
+  try {
+    const r = await fetch('/api/history');
+    const log = await r.json();
+    const el = document.getElementById('history-list');
+    if (!log.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px;">No runs yet.</div>'; return; }
+    el.innerHTML = log.slice(0,8).map(e => {
+      const ts = e.timestamp.slice(0,16).replace('T',' ');
+      return `<div class="hist-item" onclick="showHistItem(${JSON.stringify(e).replace(/"/g,'&quot;')})">
+        <div class="hist-time">${ts}</div>
+        <div class="hist-obj">${e.objective}</div>
+        <div class="hist-mode">${e.mode}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+loadHistory();
+
+function showHistItem(e) {
+  document.getElementById('objective').value = e.objective;
+  if (e.results) { lastResults = e.results; renderResults(e.results); }
+}
+
+// ── Single agent fire ──
+async function fireSingle() {
+  const aid    = document.getElementById('single-agent-select').value;
+  const prompt = document.getElementById('single-prompt').value.trim();
+  if (!prompt) return;
+  const res = document.getElementById('single-result');
+  res.style.display = 'block';
+  res.textContent = 'Firing agent...';
+  try {
+    const r = await fetch('/api/run_agent', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ agent_id: aid, prompt })
+    });
+    const d = await r.json();
+    res.textContent = d.result || d.error;
+  } catch(e) {
+    res.textContent = 'Error — is the server running?';
+  }
+}
+
+// ── Actions ──
+function copyFinal() {
+  const text = document.getElementById('final-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✓ COPIED';
+    setTimeout(() => btn.textContent = '⎘ COPY TO CLIPBOARD', 1500);
+  });
+}
+
+function exportFinal() {
+  const text = document.getElementById('final-output').textContent;
+  const obj  = document.getElementById('objective').value;
+  const blob = new Blob([`ZynoX Hive Output\n${'='.repeat(40)}\nObjective: ${obj}\n\n${text}`], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `zynox_${Date.now()}.txt`;
+  a.click();
+}
+</script>
+</body>
+</html>
